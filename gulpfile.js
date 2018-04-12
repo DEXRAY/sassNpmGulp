@@ -4,6 +4,9 @@ const browserSync = require('browser-sync');
 const reload = browserSync.reload;
 const autoprefixer = require('gulp-autoprefixer');
 const clean = require('gulp-clean');
+const concat = require('gulp-concat');
+const browserify = require('gulp-browserify');
+const merge = require('merge-stream');
 
 const SOURCEPATHS = {
     sassSource: 'src/scss/*.scss',
@@ -28,9 +31,14 @@ gulp.task('clean-scripts', function () {
 });
 
 gulp.task('sass', function () {
-    return gulp.src(SOURCEPATHS.sassSource)
+
+    var bootstrapCSS = gulp.src('./node_modules/bootstrap/dist/css/bootstrap.css');
+
+    var sassFiles = gulp.src(SOURCEPATHS.sassSource)
             .pipe(autoprefixer('last 10 versions'))
-            .pipe(sass({outputStyle: 'expanded'}).on('error', sass.logError))
+            .pipe(sass({outputStyle: 'expanded'}).on('error', sass.logError));
+    return merge(bootstrapCSS, sassFiles)
+            .pipe(concat('app.css'))
             .pipe(gulp.dest(APPPATH.css))
 });
 
@@ -42,8 +50,10 @@ gulp.task('serve', ['sass'], function () {
     });
 });
 
-gulp.task('scripts', ['clean-scripts'],function () {
+gulp.task('scripts', ['clean-scripts'], function () {
     gulp.src(SOURCEPATHS.jsSource)
+            .pipe(concat('main.js'))
+            .pipe(browserify())
             .pipe(gulp.dest(APPPATH.js));
 });
 
@@ -52,7 +62,7 @@ gulp.task('copy', ['clean-html'], function () {
             .pipe(gulp.dest(APPPATH.root));
 });
 
-gulp.task('watch', ['serve', 'copy', 'clean-html','scripts','clean-scripts'], function () {
+gulp.task('watch', ['serve', 'copy', 'scripts'], function () {
     gulp.watch([SOURCEPATHS.sassSource], ['sass']);
     gulp.watch([SOURCEPATHS.htmlSource], ['copy']);
     gulp.watch([SOURCEPATHS.jsSource], ['scripts']);
